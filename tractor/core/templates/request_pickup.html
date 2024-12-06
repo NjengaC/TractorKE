@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Request Tractor Service</title>
+
+    <!-- Leaflet and Routing Machine CSS for Maps and Routing -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin=""/>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet-routing-machine@latest/dist/leaflet-routing-machine.css"/>
+
+    <!-- Bootstrap CSS -->
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles/styles.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles/headfoot.css') }}">
+
+    <!-- Leaflet and Routing Machine Scripts -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+    <script src="https://unpkg.com/leaflet-routing-machine@latest/dist/leaflet-routing-machine.js"></script>
+
+    <style>
+        #map {
+            height: 400px;
+            width: 100%;
+        }
+    </style>
+
+    <!-- Stripe.js for Payment Integration -->
+    <script src="https://checkout.stripe.com/checkout.js"></script>
+</head>
+<body>
+    {% include 'header.html' %}
+
+    <div class="container rounded">
+        <div class="row">
+            {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+            {% for category, message in messages %}
+            <div class="alert alert-{{ category }}">
+                {{ message }}
+            </div>
+            {% endfor %}
+            {% endif %}
+            {% endwith %}
+        </div>
+
+        <!-- Service Request Form -->
+        <form id="serviceForm" method="POST" action="{{ url_for('job.request_job', step=step) }}">
+            {{ form.hidden_tag() }}
+
+            <!-- Step 1: Request Details -->
+            {% if step == '1' %}
+            <div class="form-group">
+                <label for="farm_location">Welcome to Tractor Kenya, what is your farm location?</label>
+                {{ form.farm_location(class="form-control") }}
+                {% for error in form.farm_location.errors %}
+                    <span class="text-danger">{{ error }}</span>
+                {% endfor %}
+            </div>
+            <button type="submit" class="btn btn-primary">Next</button>
+
+            <!-- Step 2: Service Type -->
+            {% elif step == '2' %}
+            <div class="form-group">
+                <label for="service_type">What type of service do you need?</label>
+                {{ form.service_type(class="form-control") }}
+                {% for error in form.service_type.errors %}
+                    <span class="text-danger">{{ error }}</span>
+                {% endfor %}
+            </div>
+            <button type="submit" class="btn btn-primary" id="confirm">Next</button>
+
+            <!-- Step 3: Map & Route Preview -->
+            {% elif step == '3' %}
+            <h2>Review the location for your requested service...</h2>
+            <div id="map"></div>
+            <button type="submit" class="btn btn-primary">Confirm to Proceed</button><br>
+            <a href="{{ url_for('job.request_job', step='2') }}" class="btn btn-primary" id="changeServiceType">Change Service Type</a>
+            <a href="{{ url_for('job.request_job', step='1') }}" class="btn btn-primary" id="changeFarmLocation">Change Farm Location</a>
+
+            <!-- Step 4: Customer Details and Payment -->
+            {% elif step == '4' %}
+            <div class="form-group">
+                <label for="contact_name">Contact Name</label>
+                {{ form.contact_name(class="form-control") }}
+                {% for error in form.contact_name.errors %}
+                    <span class="text-danger">{{ error }}</span>
+                {% endfor %}
+            </div>
+            <div class="form-group">
+                <label for="contact_number">Contact Number</label>
+                {{ form.contact_number(class="form-control") }}
+                {% for error in form.contact_number.errors %}
+                    <span class="text-danger">{{ error }}</span>
+                {% endfor %}
+            </div>
+            <button type="button" class="btn btn-primary" id="submit-button">Submit</button>
+
+            <div id="payment-section" style="display: none;">
+                <h3>Proceed to Payment</h3>
+                <button type="button" id="pay-button" class="btn btn-success">Pay $100.00</button>
+            </div>
+
+            <!-- Thank You Message -->
+            <div id="thank-you" class="thank-you-message" style="display: none;">
+                Thank you for your payment! You will be redirected home shortly.
+            </div>
+            {% endif %}
+        </form>
+    </div>
+
+    {% include 'footer.html' %}
+
+    <!-- Map and Form Logic -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            var map = L.map('map').setView([-1.286389, 36.817223], 13);
+            L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                maxZoom: 19,
+                attribution: '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+            }).addTo(map);
+
+            // Coordinates for the farm location
+            var farmCoords = L.latLng({{ session.get('farm_coords')['lat'] }}, {{ session.get('farm_coords')['lng'] }});
+
+            // Add marker and circle around the farm location
+            var farmMarker = L.marker(farmCoords).addTo(map).bindPopup('Farm Location').openPopup();
+            var farmCircle = L.circle(farmCoords, {
+                color: 'green',
+                fillColor: '#0f3',
+                fillOpacity: 0.5,
+                radius: 1000 // Adjust the radius as needed
+            }).addTo(map);
+        });
+
+        // Current Location Logic
+        document.addEventListener('DOMContentLoaded', function() {
+            document.getElementById('currentLocation').addEventListener('click', function() {
+                if (navigator.geolocation) {
+                    navigator.geolocation.getCurrentPosition(function(position) {
+                        var latitude = position.coords.latitude;
+                        var longitude = position.coords.longitude;
+
+                        // Use Nominatim API for reverse geocoding
+                        var geocodeUrl = `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${latitude}&lon=${longitude}`;
+
+                        $.getJSON(geocodeUrl, function(data) {
+                            if (data && data.address) {
+                                var address = data.display_name;
+                                var farmLocationInput = document.getElementById("farm_location");
+                                farmLocationInput.value = address;
+
+                                // Store current coordinates as hidden inputs
+                                var form = document.getElementById('serviceForm');
+                                var hiddenLat = document.createElement("input");
+                                hiddenLat.setAttribute("type", "hidden");
+                                hiddenLat.setAttribute("name", "current_lat");
+                                hiddenLat.setAttribute("value", latitude);
+                                form.appendChild(hiddenLat);
+
+                                var hiddenLng = document.createElement("input");
+                                hiddenLng.setAttribute("type", "hidden");
+                                hiddenLng.setAttribute("name", "current_lng");
+                                hiddenLng.setAttribute("value", longitude);
+                                form.appendChild(hiddenLng);
+
+                                form.submit();
+                            } else {
+                                alert("Unable to resolve the location. Please enter it manually.");
+                            }
+                        }).fail(function() {
+                            alert("Error fetching location. Please enter it manually.");
+                        });
+
+                    }, function(error) {
+                        console.error("Error fetching location: " + error.message);
+                        alert("Unable to retrieve location. Please enter manually.");
+                    });
+                } else {
+                    alert("Geolocation is not supported by this browser.");
+                }
+            });
+        });
+
+        // Payment Logic
+        $(document).ready(function() {
+            $('#submit-button').on('click', function(event) {
+                event.preventDefault();
+
+                $.ajax({
+                    url: $('#serviceForm').attr('action'),
+                    method: 'POST',
+                    data: $('#serviceForm').serialize(),
+                    success: function(response) {
+                        $('#submit-button').hide();
+                        $('#payment-section').show();
+                    },
+                    error: function() {
+                        alert('Failed to request service. Please try again.');
+                    }
+                });
+            });
+
+            $('#pay-button').on('click', function() {
+                var handler = StripeCheckout.configure({
+                    key: '{{ key }}',
+                    locale: 'auto',
+                    email: '{{ current_user.email }}',
+                    token: function(token) {
+                        $.ajax({
+                            url: '/charge',
+                            method: 'POST',
+                            data: {
+                                stripeToken: token.id,
+                                email: '{{ current_user.email }}',
+                                description: 'Payment for job from {{ current_user.username }} at ' + $('#farm_location').val()
+                            },
+                            success: function(response) {
+                                $('#thank-you').show();
+                                setTimeout(function() {
+                                    window.location.href = "{{ url_for('main.home') }}";
+                                }, 2500);
+                            },
+                            error: function() {
+                                alert('Payment failed. Please try again.');
+                            }
+                        });
+                    }
+                });
+
+                handler.open({
+                    name: 'Tractor Kenya',
+                    description: 'Payment for job at ' + $('#farm_location').val(),
+                    amount: 10000 // Amount in cents ($100.00)
+                });
+
+                $(window).on('popstate', function() {
+                    handler.close();
+                });
+            });
+        });
+    </script>
+</body>
+</html>

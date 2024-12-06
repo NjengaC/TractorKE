@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tractor Kenya</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='styles/headfoot.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='styles/home.css') }}">
+  <link rel="icon" href="{{ url_for('static', filename='images/favicon.ico') }}" type="image/x-icon">
+  <link rel="apple-touch-icon" sizes="180x180" href="{{ url_for('static', filename='images/apple-touch-icon.png') }}">
+  <link rel="icon" type="image/png" sizes="32x32" href="{{ url_for('static', filename='images/favicon-32x32.png') }}">
+  <link rel="icon" type="image/png" sizes="16x16" href="{{ url_for('static', filename='images/favicon-16x16.png') }}">
+  <link rel="manifest" href="{{ url_for('static', filename='site.webmanifest') }}">
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
+</head>
+<body>
+  {% include 'header.html' %}
+
+  <div class="row">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+    {% for category, message in messages %}
+    <div class="alert alert-{{ category }}">
+      {{ message }}
+    </div>
+    {% endfor %}
+    {% endif %}
+    {% endwith %}
+  </div>
+
+  <section class="p-4 lg:p-8 bg-black text-white">
+    <div class="container mx-auto space-y-12">
+      <div class="d-flex align-items-center flex-lg-row flex-column">
+        <div class="d-shape">
+          <img src="{{ url_for('static', filename='images/feature2.png') }}" alt="Job Management Image">
+        </div>
+        <div class="content p-6 flex-grow-1">
+          <h3 class="text-3xl font-bold">Welcome to the Tractor Operator App</h3>
+          <p class="my-6 text-gray-400 dark:text-gray-600">Manage your tractor jobs and track progress with ease!</p>
+          <a href="{{ url_for('auth.register') }}" class="btn btn-primary">Get Started</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="container p-4 lg:p-8 bg-black-800 dark:bg-back-100 text-black-100 dark:text-black-800">
+    <div class="container mx-auto space-y-12">
+      <div class="d-flex align-items-center flex-lg-row flex-column">
+        <div class="content p-6 flex-grow-1">
+          <h3 class="text-white-400 font-bold">Efficient Job Management for Operators</h3>
+          <p class="my-6 text-gray-400 dark:text-gray-600">Manage farm jobs and stay updated on your tasks as an operator.</p>
+          <a href="{{ url_for('job.request_job') }}" class="btn btn-primary">REQUEST A JOB NOW</a>
+        </div>
+        <div class="image-container">
+          <img src="{{ url_for('static', filename='images/feature3.png') }}" alt="Job Feature Image">
+        </div>
+      </div>
+      <div class="d-flex align-items-center flex-lg-row-reverse flex-column">
+        <div class="content p-6 flex-grow-1">
+          <h3 class="text-3xl font-bold">Sign Up as an Operator and Get Started</h3>
+          <p class="my-6 text-gray-400 dark:text-gray-600">Join our platform and start managing your tractor jobs today.</p>
+          <a href="{{ url_for('operator.register_operator') }}" class="btn btn-primary">REGISTER AS AN OPERATOR</a>
+        </div>
+        <div class="image-container">
+          <img src="{{ url_for('static', filename='images/background.jpg') }}" alt="Operator Registration Image">
+        </div>
+      </div>
+      <div class="d-flex align-items-center flex-lg-row flex-column">
+        <div class="content p-6 flex-grow-1">
+          <h3 class="text-3xl font-bold">Track Your Job Progress</h3>
+          <p class="my-6 text-gray-400 dark:text-gray-600">Stay informed about the progress of your farm jobs with real-time updates.</p>
+          <a href="{{ url_for('job.track_job') }}" class="btn btn-primary">TRACK YOUR JOB</a>
+        </div>
+        <div class="image-container">
+          <img src="{{ url_for('static', filename='images/feature1.png') }}" alt="Tracking Image">
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <button class="open-button" onclick="openForm()">Chat with us</button>
+  <div class="chat-popup" id="chatForm">
+    <form action="post" class="form-container">
+      <h1>Chat with us</h1>
+      <textarea placeholder="Type your message.." name="msg" required></textarea>
+      <button type="submit" class="btn">Send</button>
+      <button type="button" class="btn cancel" onclick="closeForm()">Close</button>
+    </form>
+  </div>
+
+  {% include 'footer.html' %}
+
+  <script>
+    function openForm() {
+      document.getElementById("chatForm").style.display = "block";
+    }
+
+    function closeForm() {
+      document.getElementById("chatForm").style.display = "none";
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tractor Kenya - Dashboard</title>
+  
+  <!-- Leaflet Maps for displaying farm locations -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin=""/>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+
+  <!-- jQuery and Bootstrap -->
+  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+  <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta1/dist/css/bootstrap.min.css" rel="stylesheet">
+  
+  <!-- Boxicons for Sidebar icons -->
+  <link href="https://cdn.jsdelivr.net/npm/boxicons@latest/css/boxicons.min.css" rel="stylesheet">
+
+  <!-- Custom CSS -->
+  <link rel="stylesheet" href="{{ url_for('static', filename='styles/home.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='styles/sidebar.css') }}">
+</head>
+<body id="body-pd">
+
+<!-- Main Navigation -->
+<header class="header" id="header">
+  <nav id="mainNavbar" class="navbar navbar-dark navbar-expand-md py-0 fixed-top">
+    <a href="{{ url_for('main.home') }}" class="navbar-brand">TRACTOR KENYA</a>
+    <button class="navbar-toggler" data-toggle="collapse" data-target="#navLinks">
+      <span class="navbar-toggler-icon"></span>
+    </button>
+    <div class="collapse navbar-collapse" id="navLinks">
+      <ul class="navbar-nav">
+        <li class="nav-item"><a href="{{ url_for('main.home') }}" class="nav-link">HOME</a></li>
+        <li class="nav-item"><a href="{{ url_for('main.about') }}" class="nav-link">ABOUT</a></li>
+        <li class="nav-item"><a href="{{ url_for('main.support') }}" class="nav-link">SUPPORT</a></li>
+        <li class="nav-item"><a href="#footer" class="nav-link">CONTACTS</a></li>
+      </ul>
+    </div>
+  </nav>
+</header>
+
+<!-- Sidebar -->
+<div class="l-navbar" id="nav-bar">
+  <nav class="nav">
+    <div class="nav_content">
+      <a href="#" class="nav_logo" id="logo">
+        <i class='bx bx-layer nav_logo-icon'></i>
+        <span class="nav_logo-name">Tractor Kenya</span>
+      </a>
+      <div class="nav_list" id="sidebar">
+        <a href="#" class="nav_link active">
+          <i class='bx bx-grid-alt nav_icon'></i>
+          <span class="nav_name">Dashboard</span>
+        </a>
+        <a href="{{ url_for('job.request_job') }}" class="nav_link">
+          <i class='bx bx-message-square-detail nav_icon'></i>
+          <span class="nav_name">Request Job</span>
+        </a>
+        <a href="{{ url_for('job.track_job') }}" class="nav_link">
+          <i class='bx bx-bookmark nav_icon'></i>
+          <span class="nav_name">Track Job</span>
+        </a>
+        <a href="{{ url_for('auth.edit_profile') }}" class="nav_link">
+          <i class='bx bx-user nav_icon'></i>
+          <span class="nav_name">Edit Profile</span>
+        </a>
+        <a href="{{ url_for('job.view_history') }}" class="nav_link">
+          <i class='bx bx-bar-chart-alt-2 nav_icon'></i>
+          <span class="nav_name">Job History</span>
+        </a>
+        <a href="{{ url_for('main.support') }}" class="nav_link">
+          <i class='bx bx-folder nav_icon'></i>
+          <span class="nav_name">Support</span>
+        </a>
+        <a href="{{ url_for('main.logout') }}" class="nav_link">
+          <i class='bx bx-log-out nav_icon'></i>
+          <span class="nav_name">Sign Out</span>
+        </a>
+      </div>
+    </div>
+  </nav>
+</div>
+
+<!-- Main Content -->
+<div class="main-content">
+  <div class="row justify-content-center">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+    {% for category, message in messages %}
+    <div class="alert alert-{{ category }}">
+      {{ message }}
+    </div>
+    {% endfor %}
+    {% endif %}
+    {% endwith %}
+  </div>
+
+  <div class="container">
+    <h2 class="greeting-message" style="color: #1abc9c;"></h2>
+    <div class="additional-content bg-light p-4 rounded mt-4">
+      <h2 class="text-dark">Welcome to Tractor Kenya!</h2>
+      <p>Manage your job requests, track your tractors, and optimize farm operations with ease.</p>
+      <button class="btn btn-success">View More</button>
+    </div>
+
+    <!-- Job Map for Tractor Operators -->
+    <div id="map" class="my-4" style="height: 400px;"></div>
+  </div>
+</div>
+
+<!-- Map & Sidebar Toggle Script -->
+<script>
+document.addEventListener('DOMContentLoaded', (event) => {
+    var map = L.map('map').setView([-1.286389, 36.817223], 13);
+    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19,
+        attribution: '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+    }).addTo(map);
+
+    navigator.geolocation.watchPosition(success, error);
+
+    let marker, circle;
+
+    function success(pos) {
+        const lat = pos.coords.latitude;
+        const lng = pos.coords.longitude;
+
+        if (marker) {
+            map.removeLayer(marker);
+            map.removeLayer(circle);
+        }
+
+        marker = L.marker([lat, lng]).addTo(map);
+        circle = L.circle([lat, lng], { radius: pos.coords.accuracy }).addTo(map);
+    }
+
+    function error(err) {
+        alert("Unable to retrieve location. Please allow location access.");
+    }
+});
+
+// Sidebar toggle logic
+document.getElementById('logo').addEventListener('click', function() {
+    document.getElementById('nav-bar').classList.toggle('collapsed');
+});
+
+// Greeting message logic
+document.addEventListener('DOMContentLoaded', function() {
+    const greetingElement = document.querySelector('.greeting-message');
+    const currentHour = new Date().getHours();
+    let greetingMessage = '';
+
+    if (currentHour < 12) {
+        greetingMessage = 'Good Morning! {{ current_user.username }}';
+    } else if (currentHour < 18) {
+        greetingMessage = 'Good Afternoon! {{ current_user.username }}';
+    } else {
+        greetingMessage = 'Good Evening! {{ current_user.username }}';
+    }
+    greetingElement.textContent = greetingMessage;
+});
+</script>
+</body>
+</html>
